@@ -1,0 +1,14 @@
+{
+  "collections": {
+    "type": "string",
+    "value": "aadamjacobs, pearljambootlegs, NYCTaper, taperssection, etree"
+  },
+  "resultsLimit": {
+    "type": "number",
+    "value": 100
+  },
+  "artistIndexThreshold": {
+    "type": "number",
+    "value": 4000
+  }
+}

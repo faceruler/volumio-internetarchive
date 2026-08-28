@@ -1,0 +1,52 @@
+{
+  "page": {
+    "label": "TRANSLATE.PLUGIN_CONFIGURATION"
+  },
+  "sections": [
+    {
+      "id": "collections_section",
+      "element": "section",
+      "label": "Collections & Browsing",
+      "icon": "fa-archive",
+      "onSave": {
+        "type": "controller",
+        "endpoint": "music_service/volumio-internetarchive",
+        "method": "saveConfig"
+      },
+      "saveButton": {
+        "label": "TRANSLATE.SAVE",
+        "data": [
+          "collections",
+          "resultsLimit",
+          "artistIndexThreshold"
+        ]
+      },
+      "content": [
+        {
+          "id": "collections",
+          "element": "input",
+          "type": "text",
+          "label": "Collections",
+          "doc": "Internet Archive collection identifiers to browse, separated by commas or new lines. Identifiers are case-sensitive (e.g. NYCTaper, not nyctaper). Examples: aadamjacobs, pearljambootlegs, NYCTaper, taperssection, etree",
+          "value": "aadamjacobs, pearljambootlegs, NYCTaper, taperssection, etree"
+        },
+        {
+          "id": "resultsLimit",
+          "element": "input",
+          "type": "number",
+          "label": "Results Limit",
+          "doc": "Maximum number of shows to display when listing an artist's concerts for a year (default: 100)",
+          "value": 100
+        },
+        {
+          "id": "artistIndexThreshold",
+          "element": "input",
+          "type": "number",
+          "label": "Artist Index Threshold",
+          "doc": "Collections larger than this many items show an A–Z letter index before the artist list, instead of loading every artist at once (default: 4000)",
+          "value": 4000
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "volumio-internetarchive",
+  "version": "1.0.0",
+  "description": "Internet Archive plugin for Volumio. Configure any live-music collections and browse them by collection, artist, year, and show (date + venue).",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/play-contract.js && node test/cache-and-timeout.js && node test/browse-labels.js"
+  },
+  "author": "Volumio Plugin Developer",
+  "license": "ISC",
+  "volumio_info": {
+    "prettyName": "Internet Archive",
+    "icon": "fa-archive",
+    "plugin_type": "music_service"
+  },
+  "dependencies": {
+    "fs-extra": "^0.28.0",
+    "kew": "^0.7.0",
+    "v-conf": "^1.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "internet",
+    "archive",
+    "collections",
+    "live",
+    "concerts",
+    "music",
+    "volumio"
+  ]
+}
