@@ -6,6 +6,8 @@
 // 3. Exploding a recording with no chosen format must prefer MP3.
 
 var assert = require('assert');
+var EventEmitter = require('events');
+var libQ = require('kew');
 var path = require('path');
 
 process.chdir(path.join(__dirname, '..'));
@@ -45,6 +47,7 @@ plugin.serviceName = 'volumio-internetarchive';
 plugin.loadI18nStrings();
 
 var fails = 0;
+var playbackCommands;
 function check(cond, msg) {
   try {
     assert(cond, msg);
@@ -182,6 +185,49 @@ plugin.getSourceTracks('aadamjacobs', 'testid', false).then(function(items) {
 }).then(function(items) {
   check(items[0] && items[0].trackType === 'flac',
     'explicit flac format still returns FLAC');
+}).then(function() {
+  // Playback expands complete recordings and adds every direct URL to MPD.
+  playbackCommands = [];
+  var clientMpd = new EventEmitter();
+  var unrelatedListener = function() {};
+  clientMpd.on('system-player', unrelatedListener);
+  plugin.commandRouter.stateMachine.getTrack = function() {
+    return { service: 'volumio-internetarchive' };
+  };
+  plugin.mpdPlugin = {
+    clientMpd: clientMpd,
+    sendMpdCommand: function(command) {
+      playbackCommands.push(command);
+      return libQ.resolve();
+    },
+    getState: function() { return libQ.resolve({}); }
+  };
+  plugin.explodeUri = function() {
+    return libQ.resolve([
+      { uri: 'https://archive.org/download/testid/01.mp3' },
+      { uri: 'https://archive.org/download/testid/02.flac' }
+    ]);
+  };
+
+  return plugin.clearAddPlayTrack({ uri: 'internetarchive/c/etree/source/testid' }).then(function() {
+    check(playbackCommands.join('|') === [
+      'stop',
+      'clear',
+      'add "https://archive.org/download/testid/01.mp3"',
+      'add "https://archive.org/download/testid/02.flac"',
+      'play'
+    ].join('|'), 'play queues every expanded track using direct download URLs');
+    check(clientMpd.listeners('system-player').indexOf(unrelatedListener) !== -1,
+      'playback preserves MPD listeners owned by other consumers');
+
+    playbackCommands.length = 0;
+    return plugin.prefetch({ uri: 'internetarchive/c/etree/track/testid/01.mp3' });
+  });
+}).then(function() {
+  check(playbackCommands.join('|') === [
+    'add "https://archive.org/download/testid/01.mp3"',
+    'consume 1'
+  ].join('|'), 'prefetch expands a browse URI before adding it to MPD');
 }).then(function() {
   if (fails) {
     console.log('\n' + fails + ' failure(s)');

@@ -1,8 +1,0 @@
-
-
-/Users/trevorschoen/Workspaces/volumio/src/volumio-phishin to /data/plugins/music_service/volumio-phishin
-
-
-scp -r /Users/trevorschoen/Workspaces/volumio/src/volumio-phishin volumio@volumio.local:/data/plugins/music_service/
-
-scp -r /Users/trevorschoen/Workspaces/volumio/src/volumio-internetarchive volumio@volumio.local:/data/plugins/music_service/

@@ -1304,18 +1304,44 @@ ControllerInternetArchive.prototype.clearAddPlayTrack = function(track) {
   var self = this;
   self.logger.info('clearAddPlayTrack: ' + track.uri);
 
-  var safeUri = track.uri.replace(/"/g, '\\"');
+  return self.resolvePlayableTracks(track).then(function(tracks) {
+    if (!tracks || tracks.length === 0) {
+      self.logger.error('No tracks returned for playback');
+      throw new Error('No playable track found');
+    }
+    return self.clearAddPlayTracks(tracks);
+  });
+};
+
+ControllerInternetArchive.prototype.resolvePlayableTracks = function(track) {
+  var self = this;
+  if (track.uri && track.uri.indexOf(BASE_URI + '/') === 0) {
+    self.logger.info('Exploding browse URI: ' + track.uri);
+    return self.explodeUri(track.uri);
+  }
+  return libQ.resolve([track]);
+};
+
+ControllerInternetArchive.prototype.clearAddPlayTrackDirect = function(track) {
+  return this.clearAddPlayTracks([track]);
+};
+
+ControllerInternetArchive.prototype.clearAddPlayTracks = function(tracks) {
+  var self = this;
 
   var phListenerCallback = () => {
     self.logger.info('MPD player state update');
     self.mpdPlugin.getState()
       .then(function(state) {
         var selectedTrackBlock = self.commandRouter.stateMachine.getTrack(self.commandRouter.stateMachine.currentPosition);
-        if (selectedTrackBlock.service && selectedTrackBlock.service == SERVICE_NAME) {
+        if (selectedTrackBlock && selectedTrackBlock.service === SERVICE_NAME) {
           self.mpdPlugin.clientMpd.once('system-player', phListenerCallback);
           return self.pushState(state);
         } else {
           self.logger.info('Not an internetarchive track, removing listener');
+          if (self.playerStateListener === phListenerCallback) {
+            self.playerStateListener = null;
+          }
         }
       });
   };
@@ -1325,13 +1351,18 @@ ControllerInternetArchive.prototype.clearAddPlayTrack = function(track) {
       return self.mpdPlugin.sendMpdCommand('clear', []);
     })
     .then(function() {
-      return self.mpdPlugin.sendMpdCommand('load "' + safeUri + '"', []);
-    })
-    .fail(function(e) {
-      return self.mpdPlugin.sendMpdCommand('add "' + safeUri + '"', []);
+      return tracks.reduce(function(queue, track) {
+        return queue.then(function() {
+          var safeUri = String(track.uri).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          return self.mpdPlugin.sendMpdCommand('add "' + safeUri + '"', []);
+        });
+      }, libQ.resolve());
     })
     .then(function() {
-      self.mpdPlugin.clientMpd.removeAllListeners('system-player');
+      if (self.playerStateListener) {
+        self.mpdPlugin.clientMpd.removeListener('system-player', self.playerStateListener);
+      }
+      self.playerStateListener = phListenerCallback;
       self.mpdPlugin.clientMpd.once('system-player', phListenerCallback);
 
       return self.mpdPlugin.sendMpdCommand('play', [])
@@ -1342,7 +1373,7 @@ ControllerInternetArchive.prototype.clearAddPlayTrack = function(track) {
             });
         });
     });
-}
+};
 
 ControllerInternetArchive.prototype.seek = function(timepos) {
   var self = this;
@@ -1414,10 +1445,16 @@ ControllerInternetArchive.prototype.prefetch = function(nextTrack) {
   var self = this;
   self.logger.info('prefetch');
 
-  var safeUri = nextTrack.uri.replace(/"/g, '\\"');
-  return self.mpdPlugin.sendMpdCommand('add "' + safeUri + '"', [])
-    .then(function() {
-      return self.mpdPlugin.sendMpdCommand('consume 1', []);
+  return self.resolvePlayableTracks(nextTrack).then(function(tracks) {
+    if (!tracks || tracks.length === 0) {
+      self.logger.error('No tracks returned for prefetch');
+      throw new Error('No playable track found');
+    }
+    var safeUri = String(tracks[0].uri).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return self.mpdPlugin.sendMpdCommand('add "' + safeUri + '"', [])
+      .then(function() {
+        return self.mpdPlugin.sendMpdCommand('consume 1', []);
+      });
     });
 }
 
